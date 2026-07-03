@@ -1,0 +1,1448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multivariate Linear Regression — Lecture Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rose-deep:    #4A1530;
+    --rose-mid:     #7D2E50;
+    --rose-soft:    #B05070;
+    --rose-pale:    #D9899F;
+    --rose-mist:    #F2D0DA;
+    --blush:        #FAF0F3;
+    --blush-mid:    #F5E2E8;
+    --mauve:        #C06080;
+    --mauve-light:  #E8A0B4;
+    --charcoal:     #1E0E14;
+    --text-body:    #3A1525;
+    --text-muted:   #7D4A5E;
+    --white:        #FFFFFF;
+    --sidebar-w:    280px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--blush);
+    color: var(--text-body);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ── SIDEBAR ─────────────────────────────────────── */
+  #sidebar {
+    width: var(--sidebar-w);
+    background: var(--rose-deep);
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    transition: transform .3s ease;
+  }
+  #sidebar::-webkit-scrollbar { width: 4px; }
+  #sidebar::-webkit-scrollbar-track { background: transparent; }
+  #sidebar::-webkit-scrollbar-thumb { background: var(--rose-soft); border-radius: 4px; }
+
+  .sidebar-header {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+    position: sticky; top: 0;
+    background: var(--rose-deep);
+    z-index: 1;
+  }
+  .sidebar-header .course-label {
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--rose-pale);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .sidebar-header h1 {
+    font-family: 'Lora', serif;
+    font-size: 15px;
+    color: var(--white);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .progress-bar-wrap {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .progress-label {
+    font-size: 11px;
+    color: var(--rose-pale);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .progress-track {
+    height: 4px;
+    background: rgba(255,255,255,.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--rose-pale), var(--mauve-light));
+    border-radius: 2px;
+    transition: width .4s ease;
+    width: 0%;
+  }
+
+  .nav-list { list-style: none; padding: 12px 0 80px; }
+  .nav-item a {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 20px;
+    text-decoration: none;
+    color: rgba(255,255,255,.6);
+    font-size: 12.5px;
+    line-height: 1.4;
+    transition: all .2s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item a:hover { color: var(--white); background: rgba(255,255,255,.05); }
+  .nav-item.active a {
+    color: var(--mauve-light);
+    border-left-color: var(--mauve);
+    background: rgba(255,255,255,.07);
+    font-weight: 500;
+  }
+  .nav-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    flex-shrink: 0;
+    margin-top: 5px;
+    transition: background .3s;
+  }
+  .nav-item.visited .nav-dot { background: var(--mauve-light); border-color: var(--mauve-light); }
+  .nav-item .nav-type {
+    font-size: 9.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--rose-pale);
+    margin-top: 2px;
+    opacity: .7;
+  }
+
+  /* ── MAIN ────────────────────────────────────────── */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    max-width: 860px;
+    padding: 48px 52px 120px;
+  }
+
+  /* ── SECTION CARDS ───────────────────────────────── */
+  .section-card {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--rose-mist);
+    margin-bottom: 36px;
+    overflow: hidden;
+    scroll-margin-top: 32px;
+    box-shadow: 0 2px 8px rgba(74,21,48,.05);
+    transition: box-shadow .2s;
+  }
+  .section-card:hover { box-shadow: 0 4px 20px rgba(74,21,48,.1); }
+
+  .card-header {
+    padding: 22px 28px 18px;
+    border-bottom: 1px solid var(--blush-mid);
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: var(--rose-mist);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+  .card-meta { flex: 1; }
+  .card-type {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--rose-soft);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .card-title {
+    font-family: 'Lora', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--rose-deep);
+    line-height: 1.3;
+  }
+  .card-duration {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .card-body { padding: 24px 28px 28px; }
+
+  /* ── TYPOGRAPHY ──────────────────────────────────── */
+  .card-body h2 {
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    color: var(--rose-mid);
+    margin: 28px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 1.5px solid var(--rose-mist);
+  }
+  .card-body h3 {
+    font-family: 'Lora', serif;
+    font-size: 15.5px;
+    color: var(--rose-deep);
+    margin: 22px 0 10px;
+    font-style: italic;
+  }
+  .card-body h4 {
+    font-family: 'Lora', serif;
+    font-size: 14px;
+    color: var(--rose-mid);
+    margin: 16px 0 8px;
+    font-weight: 700;
+  }
+  .card-body p { margin-bottom: 12px; font-size: 14.5px; }
+  .card-body ul, .card-body ol { margin: 8px 0 14px 20px; font-size: 14.5px; }
+  .card-body li { margin-bottom: 5px; }
+  .card-body strong { color: var(--rose-deep); font-weight: 600; }
+  .card-body em { color: var(--rose-soft); }
+
+  /* ── CALLOUTS ────────────────────────────────────── */
+  .callout-ask {
+    background: #FFF0F4;
+    border-left: 3px solid var(--mauve);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: #5A1A30;
+  }
+  .callout-ask .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--mauve);
+    margin-bottom: 4px;
+  }
+  .callout-note {
+    background: #FBF0F4;
+    border-left: 3px solid var(--rose-soft);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--rose-deep);
+  }
+  .callout-note .callout-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--rose-soft);
+    margin-bottom: 4px;
+  }
+  .callout-viz {
+    background: #FFF5F8;
+    border: 1.5px dashed var(--rose-pale);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 13.5px;
+    color: var(--rose-deep);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .callout-viz .viz-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+  .callout-viz .viz-body { flex: 1; }
+  .callout-viz .viz-label {
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--rose-soft);
+    margin-bottom: 5px;
+  }
+  .callout-viz a {
+    color: var(--rose-mid);
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  /* ── TABLE ───────────────────────────────────────── */
+  .card-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--rose-mist);
+  }
+  .card-body th {
+    background: var(--rose-mid);
+    color: var(--white);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: .04em;
+  }
+  .card-body td { padding: 9px 14px; border-top: 1px solid var(--blush-mid); font-size: 13px; }
+  .card-body tr:nth-child(even) td { background: var(--blush); }
+
+  /* ── CODE ────────────────────────────────────────── */
+  .card-body pre {
+    background: var(--charcoal);
+    color: #F4C0D0;
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    overflow-x: auto;
+    margin: 14px 0;
+    line-height: 1.6;
+  }
+  .card-body code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--blush-mid);
+    color: var(--rose-mid);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+  }
+  .card-body pre code { background: none; color: inherit; padding: 0; }
+
+  .output-wrap { margin: -6px 0 14px; }
+  .output-label {
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--rose-pale);
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+  .output-block {
+    background: #FBF5F7;
+    border: 1px solid var(--rose-mist);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-body);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* ── EQUATION BLOCK ──────────────────────────────── */
+  .equation {
+    background: var(--blush-mid);
+    border: 1.5px solid var(--rose-mist);
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 14px 0;
+    text-align: center;
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-style: italic;
+    color: var(--rose-deep);
+    letter-spacing: .03em;
+  }
+
+  /* ── QUIZ ────────────────────────────────────────── */
+  .quiz-card .card-icon { background: #FDDDE8; }
+  .quiz-question {
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--rose-deep);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+  .quiz-options { list-style: none; margin: 0; }
+  .quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1.5px solid var(--rose-mist);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .2s;
+    user-select: none;
+    background: var(--white);
+  }
+  .quiz-option:hover { border-color: var(--rose-soft); background: var(--blush); }
+  .quiz-option.selected-correct { border-color: var(--rose-soft); background: #FDEEF3; color: var(--rose-deep); }
+  .quiz-option.selected-wrong { border-color: #C0392B; background: #FDECEA; color: #922B21; }
+  .quiz-option.reveal-correct { border-color: var(--rose-soft); background: #FDEEF3; }
+  .quiz-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--rose-mist);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    transition: all .2s;
+    font-weight: 700;
+  }
+  .selected-correct .quiz-circle { border-color: var(--rose-soft); background: var(--rose-soft); color: #fff; }
+  .selected-wrong .quiz-circle { border-color: #C0392B; background: #C0392B; color: #fff; }
+  .reveal-correct .quiz-circle { border-color: var(--rose-soft); background: var(--rose-mist); }
+  .quiz-feedback {
+    margin-top: 14px; padding: 12px 16px;
+    border-radius: 8px; font-size: 13.5px;
+    font-weight: 500; display: none;
+  }
+  .quiz-feedback.correct { background: #FDEEF3; color: var(--rose-deep); display: block; }
+  .quiz-feedback.wrong { background: #FDECEA; color: #922B21; display: block; }
+
+  /* ── SUMMARY GRID ────────────────────────────────── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .summary-item {
+    background: var(--blush);
+    border: 1px solid var(--rose-mist);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--rose-deep);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .summary-item::before {
+    content: '▸';
+    color: var(--rose-soft);
+    font-size: 11px;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── FLOW STEPS ──────────────────────────────────── */
+  .flow-steps { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--rose-mist);
+    position: relative;
+  }
+  .flow-step:last-child { border-bottom: none; }
+  .flow-num {
+    width: 30px; height: 30px;
+    background: var(--rose-mid);
+    border-radius: 50%;
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+    font-weight: 700;
+  }
+  .flow-content h4 {
+    font-family: 'Lora', serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--rose-deep);
+    margin-bottom: 3px;
+  }
+  .flow-content p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* ── SPLIT DIAGRAM ───────────────────────────────── */
+  .split-diagram {
+    display: flex;
+    gap: 4px;
+    margin: 16px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 44px;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .split-train {
+    background: linear-gradient(135deg, var(--rose-mid), var(--rose-soft));
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px 0 0 8px;
+    padding: 0 14px;
+    letter-spacing: .04em;
+  }
+  .split-test {
+    background: var(--rose-mist);
+    color: var(--rose-deep);
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 0 8px 8px 0;
+    padding: 0 14px;
+    letter-spacing: .04em;
+  }
+
+  /* ── COEF TABLE ──────────────────────────────────── */
+  .coef-row-positive td:last-child { color: #2E7D32; font-weight: 600; }
+  .coef-row-negative td:last-child { color: #C62828; font-weight: 600; }
+
+  /* ── R2 SCALE ────────────────────────────────────── */
+  .r2-scale {
+    display: flex;
+    gap: 0;
+    height: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    margin: 12px 0 6px;
+  }
+  .r2-segment { flex: 1; }
+  .r2-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  /* ── ONE-HOT VIZ ─────────────────────────────────── */
+  .ohe-grid {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--rose-mist);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 14px 0;
+    font-size: 12.5px;
+  }
+  .ohe-cell {
+    background: var(--white);
+    padding: 8px 12px;
+    text-align: center;
+  }
+  .ohe-header {
+    background: var(--rose-mid);
+    color: #fff;
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: .04em;
+  }
+  .ohe-origin { background: var(--blush); font-weight: 600; color: var(--rose-deep); text-align: left; }
+  .ohe-one { background: #FDEEF3; color: var(--rose-mid); font-weight: 700; }
+  .ohe-zero { color: var(--text-muted); }
+
+  /* ── STATSMODELS SUMMARY ─────────────────────────── */
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin: 14px 0;
+    border: 1px solid var(--rose-mist);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .stats-table th {
+    background: var(--rose-deep);
+    color: var(--white);
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .stats-table td { padding: 8px 12px; border-top: 1px solid var(--rose-mist); font-family: 'JetBrains Mono', monospace; font-size: 11.5px; }
+  .stats-table tr:nth-child(even) td { background: var(--blush); }
+  .stats-significant td { background: #FDEEF3 !important; }
+  .stats-significant td:first-child { font-weight: 600; color: var(--rose-deep); }
+
+  /* ── HAMBURGER ───────────────────────────────────── */
+  #hamburger {
+    display: none;
+    position: fixed;
+    top: 16px; left: 16px;
+    z-index: 200;
+    background: var(--rose-deep);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 5px;
+  }
+  #hamburger span { display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px; }
+  #overlay { display: none; }
+
+  @media (max-width: 768px) {
+    #hamburger { display: flex; }
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 24px 18px 80px; max-width: 100%; }
+    #overlay {
+      display: block; position: fixed; inset: 0;
+      background: rgba(0,0,0,.4); z-index: 99;
+      opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    #overlay.active { opacity: 1; pointer-events: all; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .ohe-grid { grid-template-columns: auto 1fr 1fr 1fr; font-size: 11px; }
+    .card-body { padding: 18px 18px 22px; }
+    .card-header { padding: 18px 18px 14px; }
+  }
+
+  /* ── BACK TO TOP ─────────────────────────────────── */
+  #back-top {
+    position: fixed; bottom: 32px; right: 32px;
+    background: var(--rose-mid); color: #fff;
+    border: none; border-radius: 50%;
+    width: 44px; height: 44px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(74,21,48,.3);
+    opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 50;
+  }
+  #back-top.visible { opacity: 1; pointer-events: all; }
+  #back-top:hover { background: var(--rose-deep); }
+
+  .card-body a { color: var(--rose-soft); text-decoration: underline; text-underline-offset: 3px; }
+  .card-body a:hover { color: var(--rose-deep); }
+
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: none; } }
+</style>
+</head>
+<body>
+
+<button id="hamburger" aria-label="Open menu" onclick="toggleSidebar()">
+  <span></span><span></span><span></span>
+</button>
+<div id="overlay" onclick="toggleSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-header">
+    <div class="course-label">ML Foundations · Lecture 3</div>
+    <h1>Multivariate Linear Regression</h1>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-label">
+      <span>Progress</span><span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <ul class="nav-list">
+    <li class="nav-item" data-target="s-recap"><a href="#s-recap"><span class="nav-dot"></span><span><div>Recap</div><div class="nav-type">Review</div></span></a></li>
+    <li class="nav-item" data-target="s-mse3d"><a href="#s-mse3d"><span class="nav-dot"></span><span><div>MSE Surface in 3D</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-multi"><a href="#s-multi"><span class="nav-dot"></span><span><div>Multivariate Linear Regression</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-traintestsplit"><a href="#s-traintestsplit"><span class="nav-dot"></span><span><div>Train-Test Split</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-featimp"><a href="#s-featimp"><span class="nav-dot"></span><span><div>Feature Importance</div><div class="nav-type">Interpretation</div></span></a></li>
+    <li class="nav-item" data-target="s-standardize"><a href="#s-standardize"><span class="nav-dot"></span><span><div>Standardization</div><div class="nav-type">Preprocessing</div></span></a></li>
+    <li class="nav-item" data-target="s-minmax"><a href="#s-minmax"><span class="nav-dot"></span><span><div>Min-Max Scaler</div><div class="nav-type">Preprocessing</div></span></a></li>
+    <li class="nav-item" data-target="s-casestudy"><a href="#s-casestudy"><span class="nav-dot"></span><span><div>Case Study: Car Mileage</div><div class="nav-type">Case Study</div></span></a></li>
+    <li class="nav-item" data-target="s-ohe"><a href="#s-ohe"><span class="nav-dot"></span><span><div>One-Hot Encoding</div><div class="nav-type">Preprocessing</div></span></a></li>
+    <li class="nav-item" data-target="s-missing"><a href="#s-missing"><span class="nav-dot"></span><span><div>Missing Values</div><div class="nav-type">Preprocessing</div></span></a></li>
+    <li class="nav-item" data-target="s-fit"><a href="#s-fit"><span class="nav-dot"></span><span><div>Fit & Evaluate Model</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-outliers"><a href="#s-outliers"><span class="nav-dot"></span><span><div>Impact of Outliers</div><div class="nav-type">Concept</div></span></a></li>
+    <li class="nav-item" data-target="s-adjr2"><a href="#s-adjr2"><span class="nav-dot"></span><span><div>Adjusted R²</div><div class="nav-type">Metric</div></span></a></li>
+    <li class="nav-item" data-target="s-statsmodels"><a href="#s-statsmodels"><span class="nav-dot"></span><span><div>StatsModels</div><div class="nav-type">Implementation</div></span></a></li>
+    <li class="nav-item" data-target="s-wrap"><a href="#s-wrap"><span class="nav-dot"></span><span><div>Wrap Up</div><div class="nav-type">Summary</div></span></a></li>
+  </ul>
+</nav>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- RECAP -->
+  <section class="section-card" id="s-recap">
+    <div class="card-header">
+      <div class="card-icon">🔁</div>
+      <div class="card-meta">
+        <div class="card-type">Review</div>
+        <div class="card-title">Recap from Lecture 2</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Last session, we built our first Linear Regression model from the ground up:</p>
+      <ul>
+        <li>Linear regression intuition and the best-fit line</li>
+        <li>Residuals (prediction errors) and why we square them</li>
+        <li>Mean Squared Error (MSE) as the cost function</li>
+        <li>Gradient Descent — how the model iteratively improves</li>
+        <li>Scikit-Learn's <code>LinearRegression</code> API</li>
+        <li>R² score for evaluating model performance</li>
+      </ul>
+      <div class="callout-note">
+        <div class="callout-label">📌 The 3-Component Framework</div>
+        Every ML model = <strong>Model</strong> (makes predictions) + <strong>Cost Function</strong> (measures error) + <strong>Optimizer</strong> (minimizes error). This applies to all algorithms you'll encounter.
+      </div>
+      <h3>Today's Focus</h3>
+      <p>Now that we can train a model, we'll learn how to do it <em>right</em> — using proper train-test splits, multiple features, data preprocessing, and richer statistical tools.</p>
+    </div>
+  </section>
+
+  <!-- MSE 3D -->
+  <section class="section-card" id="s-mse3d">
+    <div class="card-header">
+      <div class="card-icon">🏔️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Visualizing the MSE Surface in 3D</div>
+        <div class="card-duration">⏱ 1.5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>When we have two parameters — <code>w</code> (slope) and <code>b</code> (intercept) — the MSE cost function forms a <strong>3D bowl-shaped surface</strong>:</p>
+      <ul>
+        <li>The X and Y axes represent values of <code>w</code> and <code>b</code></li>
+        <li>The Z axis represents the corresponding MSE value</li>
+        <li>The bottom of the bowl is the <strong>minimum MSE</strong> — the point where our best-fit line lives</li>
+      </ul>
+      <p>Gradient Descent works by starting at a random point on this surface and taking small steps downhill until it reaches the bottom. As it descends, you can watch the regression line simultaneously move toward the best fit.</p>
+      <div class="callout-note">
+        <div class="callout-label">💡 Intuition</div>
+        The smoother and more bowl-shaped the MSE surface, the more reliably Gradient Descent finds the global minimum. For Linear Regression, this surface is always convex — so GD always converges.
+      </div>
+    </div>
+  </section>
+
+  <!-- MULTIVARIATE LR -->
+  <section class="section-card" id="s-multi">
+    <div class="card-header">
+      <div class="card-icon">📊</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Multivariate Linear Regression</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Instead of using a single feature, we now use <strong>all available features</strong> from the Cars24 dataset to predict selling price. With <code>d</code> features, the model equation becomes:</p>
+      <div class="equation">price = w₁x₁ + w₂x₂ + … + wₐxₐ + b</div>
+
+      <h3>Load Data and Define X, Y</h3>
+      <pre><code>import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+df = pd.read_csv('cars24-car-price-clean.csv')
+
+# Drop target from features; Y is the target
+X = df[df.columns.drop('selling_price')].to_numpy()
+Y = df["selling_price"].to_numpy().reshape(-1, 1)
+
+print(X.shape, Y.shape)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">(19820, 17) (19820, 1)</div>
+      </div>
+      <p>X has 17 features. Y is reshaped to a 2D column vector as Scikit-Learn requires.</p>
+
+      <div class="callout-ask">
+        <div class="callout-label">🤔 Why convert to NumPy?</div>
+        Pandas Series doesn't support <code>.reshape()</code>. Converting to a NumPy array first makes reshaping and matrix operations straightforward.
+      </div>
+
+      <h3>Fit and Score</h3>
+      <pre><code>model = LinearRegression()
+model.fit(X, Y)
+model.score(X, Y)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">0.9421889572026914</div>
+      </div>
+
+      <h3>Predictions vs Actuals</h3>
+      <pre><code>y_hat = model.predict(X)
+print('Predicted:', y_hat[:3])
+print('Actual:   ', Y[:3])</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Predicted: [[-1.183] [-0.294] [-0.895]]
+Actual:    [[-1.111] [-0.224] [-0.915]]</div>
+      </div>
+
+      <h3>Learned Coefficients</h3>
+      <pre><code>print(model.coef_)
+print(model.intercept_)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">[[ 0.065 -0.018 -0.049  0.031  0.027 -0.065
+   0.061  0.794 -0.017 -0.003  0.014  0.013
+   0.003 -0.023 -0.013 -0.025 -0.033]]
+[-6.34e-17]</div>
+      </div>
+      <p>Notice the <code>model</code> feature has a coefficient of <strong>0.794</strong> — by far the largest, confirming it is the most predictive single feature for selling price.</p>
+    </div>
+  </section>
+
+  <!-- TRAIN TEST SPLIT -->
+  <section class="section-card" id="s-traintestsplit">
+    <div class="card-header">
+      <div class="card-icon">✂️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Importance of Train-Test Split</div>
+        <div class="card-duration">⏱ 4 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>In Lecture 2, we evaluated our model on the <em>same data</em> we trained it on. That's unreliable — the model has already "seen" those points. We need a held-out test set.</p>
+
+      <h3>The Split</h3>
+      <p>Partition the data <strong>randomly</strong> into two non-overlapping sets:</p>
+      <div class="split-diagram">
+        <div class="split-train" style="flex: 8">🎓 Training Set (80%)</div>
+        <div class="split-test" style="flex: 2">🧪 Test Set (20%)</div>
+      </div>
+
+      <h3>What Split Ratio Should You Use?</h3>
+      <table>
+        <tr><th>Data Size</th><th>Recommended Split</th><th>Reasoning</th></tr>
+        <tr><td>Small (&lt; 5,000 rows)</td><td>80 / 20</td><td>Model needs more data to learn reliably</td></tr>
+        <tr><td>Large (10,000+ rows)</td><td>70 / 30</td><td>Larger test set gives more confident evaluation</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">⚠️ The Split Must Be Random</div>
+        If your data is sorted (e.g., by year), taking the first 80% would mean the model never sees recent data during training. Always shuffle before splitting.
+      </div>
+
+      <h3>The Correct Workflow</h3>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-num">1</div>
+          <div class="flow-content"><h4>Fit on X_train, y_train</h4><p>The model learns parameters exclusively from training data</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">2</div>
+          <div class="flow-content"><h4>Predict on X_test</h4><p>Run the trained model on data it has never seen</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-num">3</div>
+          <div class="flow-content"><h4>Evaluate on y_test</h4><p>Compare predictions to true values — this R² is the honest measure</p></div>
+        </div>
+      </div>
+      <p>Scikit-Learn provides <code>train_test_split</code> to handle all of this automatically:</p>
+      <pre><code>from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.30, random_state=1
+)</code></pre>
+    </div>
+  </section>
+
+  <!-- FEATURE IMPORTANCE -->
+  <section class="section-card" id="s-featimp">
+    <div class="card-header">
+      <div class="card-icon">🔍</div>
+      <div class="card-meta">
+        <div class="card-type">Interpretation</div>
+        <div class="card-title">Feature Importance and Coefficient Interpretation</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Suppose we're predicting product sales from two ad channels:</p>
+      <div class="equation">ŷ = 3 + 2×TV + 3×SocialMedia</div>
+      <p>How to read this:</p>
+      <ul>
+        <li>Holding TV budget fixed, a <strong>+1 unit increase in Social Media spend → +3 units of sales</strong></li>
+        <li>Holding Social Media fixed, a <strong>+1 unit increase in TV spend → +2 units of sales</strong></li>
+        <li>Social Media has a <strong>stronger positive effect</strong> on sales in this model</li>
+      </ul>
+
+      <h3>Negative Coefficients</h3>
+      <div class="equation">ŷ = 3 + 2×TV − 3×SocialMedia</div>
+      <p>Now Social Media has a <strong>negative coefficient</strong>: more social media spending <em>decreases</em> predicted sales. This might reflect a poorly received campaign that triggered a boycott.</p>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Key Rule</div>
+        <strong>Higher absolute value of a coefficient → stronger influence on the target.</strong> The sign tells you direction (positive = increases target, negative = decreases target). Comparing coefficient magnitudes is only valid when features are on the same scale — a reason to standardize.
+      </div>
+    </div>
+  </section>
+
+  <!-- STANDARDIZATION -->
+  <section class="section-card" id="s-standardize">
+    <div class="card-header">
+      <div class="card-icon">⚖️</div>
+      <div class="card-meta">
+        <div class="card-type">Preprocessing</div>
+        <div class="card-title">Importance of Standardization</div>
+        <div class="card-duration">⏱ 2.5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Consider two features in our ad-spend model:</p>
+      <ul>
+        <li><strong>TV budget:</strong> values in the thousands (e.g., 50,000 – 500,000)</li>
+        <li><strong>Social Media budget:</strong> values in single digits because it's expressed in millions (e.g., 1 – 30)</li>
+      </ul>
+      <p>When the model learns coefficients, it compensates for scale:</p>
+      <ul>
+        <li>It picks a <strong>tiny w₁ for TV</strong> (since TV values are huge, even a small w₁ has big impact)</li>
+        <li>It picks a <strong>large w₂ for Social Media</strong> (since SM values are small, w₂ must be large to matter)</li>
+      </ul>
+      <p>This makes the raw coefficients <em>incomparable</em> and can also slow down Gradient Descent convergence.</p>
+
+      <h3>Two Solutions</h3>
+      <table>
+        <tr><th>Method</th><th>Formula</th><th>Result</th></tr>
+        <tr><td><strong>Z-score Standardization</strong></td><td>(xᵢ − μ) / σ</td><td>Mean = 0, Std = 1</td></tr>
+        <tr><td><strong>Min-Max Normalization</strong></td><td>(xᵢ − min) / (max − min)</td><td>All values in [0, 1]</td></tr>
+      </table>
+      <p>After scaling, coefficients are on comparable scales and can be used to directly rank feature importance.</p>
+    </div>
+  </section>
+
+  <!-- MIN MAX -->
+  <section class="section-card" id="s-minmax">
+    <div class="card-header">
+      <div class="card-icon">📏</div>
+      <div class="card-meta">
+        <div class="card-type">Preprocessing</div>
+        <div class="card-title">Min-Max Scaler</div>
+        <div class="card-duration">⏱ 1.5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Min-Max scaling squeezes every feature value into [0, 1]:</p>
+      <div class="equation">x_scaled = (xᵢ − min) / (max − min)</div>
+
+      <h3>Proof It Works</h3>
+      <table>
+        <tr><th>Input xᵢ</th><th>Result</th></tr>
+        <tr><td>xᵢ = min</td><td>(min − min) / (max − min) = <strong>0</strong></td></tr>
+        <tr><td>xᵢ = max</td><td>(max − min) / (max − min) = <strong>1</strong></td></tr>
+        <tr><td>Any value in between</td><td>A value in (0, 1)</td></tr>
+      </table>
+
+      <h3>The Outlier Problem</h3>
+      <div class="callout-ask">
+        <div class="callout-label">⚠️ Critical Limitation</div>
+        If a feature contains an extreme outlier, that outlier becomes the <code>max</code>. Every other data point then gets squashed into a very narrow band near 0 — e.g., [0.0, 0.18] — losing most of the original variance. <strong>Always handle outliers before Min-Max scaling.</strong>
+      </div>
+      <p>Z-score standardization is less sensitive to outliers since it uses mean and standard deviation rather than the absolute min/max.</p>
+    </div>
+  </section>
+
+  <!-- CASE STUDY -->
+  <section class="section-card" id="s-casestudy">
+    <div class="card-header">
+      <div class="card-icon">🚗</div>
+      <div class="card-meta">
+        <div class="card-type">Case Study</div>
+        <div class="card-title">Case Study: Predict Car Mileage (MPG)</div>
+        <div class="card-duration">⏱ 10 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>We'll predict <strong>miles per gallon (MPG)</strong> using the classic <em>Auto MPG</em> dataset. This walkthrough covers the complete preprocessing pipeline before model fitting.</p>
+
+      <h3>The Dataset (398 rows × 9 columns)</h3>
+      <table>
+        <tr><th>Feature</th><th>Type</th><th>Notes</th></tr>
+        <tr><td><strong>mpg</strong></td><td>Float</td><td>🎯 Target variable</td></tr>
+        <tr><td>cylinders</td><td>Int</td><td>Number of cylinders</td></tr>
+        <tr><td>displacement</td><td>Float</td><td>Engine displacement (cu. in.)</td></tr>
+        <tr><td>horsepower</td><td>Object</td><td>Has missing values marked as <code>?</code></td></tr>
+        <tr><td>weight</td><td>Int</td><td>Vehicle weight (lbs)</td></tr>
+        <tr><td>acceleration</td><td>Float</td><td>0–60 mph time (sec)</td></tr>
+        <tr><td>model year</td><td>Int</td><td>Two-digit year (70–82)</td></tr>
+        <tr><td>origin</td><td>Int</td><td>1=American, 2=European, 3=Asian</td></tr>
+        <tr><td>car name</td><td>String</td><td>Will be dropped — not useful as a feature</td></tr>
+      </table>
+
+      <h3>Load and Initial Cleaning</h3>
+      <pre><code>import numpy as np
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
+cData = pd.read_csv("auto-mpg.csv")
+
+# Drop car name (not a generalizable feature)
+cData = cData.drop('car name', axis=1)
+
+# Replace numeric origin codes with readable labels
+cData['origin'] = cData['origin'].replace({
+    1: 'American', 2: 'europe', 3: 'asia'
+})</code></pre>
+    </div>
+  </section>
+
+  <!-- ONE-HOT ENCODING -->
+  <section class="section-card" id="s-ohe">
+    <div class="card-header">
+      <div class="card-icon">🏷️</div>
+      <div class="card-meta">
+        <div class="card-type">Preprocessing</div>
+        <div class="card-title">One-Hot Encoding</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The <code>origin</code> column contains categories: American, Europe, Asia. We can't feed strings into a regression model, so we need to convert them to numbers.</p>
+
+      <h3>Why Not Just Use 1, 2, 3?</h3>
+      <p>Assigning America=1, Europe=2, Asia=3 would imply an <em>ordering</em> that doesn't exist. The equation <code>y = mx + c</code> would treat Asia (3) as having three times the impact of America (1). That's mathematically wrong for a nominal category.</p>
+
+      <h3>The Solution: One-Hot Encoding</h3>
+      <p>Create one binary column per category. Each row gets a <code>1</code> in exactly one column:</p>
+
+      <div class="ohe-grid">
+        <div class="ohe-cell ohe-header">Origin</div>
+        <div class="ohe-cell ohe-header">origin_American</div>
+        <div class="ohe-cell ohe-header">origin_europe</div>
+        <div class="ohe-cell ohe-header">origin_asia</div>
+        <div class="ohe-cell ohe-origin">American</div>
+        <div class="ohe-cell ohe-one">1</div>
+        <div class="ohe-cell ohe-zero">0</div>
+        <div class="ohe-cell ohe-zero">0</div>
+        <div class="ohe-cell ohe-origin">europe</div>
+        <div class="ohe-cell ohe-zero">0</div>
+        <div class="ohe-cell ohe-one">1</div>
+        <div class="ohe-cell ohe-zero">0</div>
+        <div class="ohe-cell ohe-origin">asia</div>
+        <div class="ohe-cell ohe-zero">0</div>
+        <div class="ohe-cell ohe-zero">0</div>
+        <div class="ohe-cell ohe-one">1</div>
+      </div>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          See One-Hot Encoding transform a column in real time:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/one-hot-encoding-transformation-column-split-explosion/" target="_blank">One-Hot Encoding — Column Split Explosion →</a>
+        </div>
+      </div>
+
+      <h3>Dropping the Redundant Column</h3>
+      <p>With 3 categories, knowing any 2 columns tells you the 3rd automatically (if not American and not European → must be Asian). One column is therefore redundant and can cause <strong>multicollinearity</strong>. We drop one:</p>
+
+      <pre><code>cData = pd.get_dummies(cData, columns=['origin'])
+# Drop one redundant dummy column
+X = cData.drop(['mpg', 'origin_europe'], axis=1)
+y = cData[['mpg']]</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Resulting columns in X</div>
+        <div class="output-block">cylinders, displacement, horsepower, weight, acceleration,
+model year, origin_American, origin_asia</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MISSING VALUES -->
+  <section class="section-card" id="s-missing">
+    <div class="card-header">
+      <div class="card-icon">🔧</div>
+      <div class="card-meta">
+        <div class="card-type">Preprocessing</div>
+        <div class="card-title">Handling Missing Values</div>
+        <div class="card-duration">⏱ 5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The dataset uses <code>?</code> to mark missing horsepower values — meaning the <code>horsepower</code> column was parsed as strings (<code>object</code> dtype) instead of numbers. Let's find and fix this.</p>
+
+      <h3>Detect Non-Numeric Rows</h3>
+      <pre><code>hpIsDigit = pd.DataFrame(cData.horsepower.str.isdigit())
+cData[hpIsDigit['horsepower'] == False]</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output — 6 rows with '?' in horsepower</div>
+        <div class="output-block">     mpg  cylinders  displacement horsepower  weight  ...
+32  25.0          4          98.0          ?    2046
+126  21.0          6         200.0          ?    2875
+330  40.0          4          85.0          ?    1835
+(+ 3 more rows)</div>
+      </div>
+
+      <h3>Replace <code>?</code> with <code>NaN</code>, then Convert Type</h3>
+      <pre><code>cData = cData.replace('?', np.nan)
+cData['horsepower'] = cData['horsepower'].astype(float)</code></pre>
+
+      <h3>Impute with Median</h3>
+      <p>Dropping 6 rows out of 398 is an option, but imputing with the <strong>median</strong> retains them without distorting the distribution (unlike mean, which is sensitive to outliers):</p>
+      <pre><code>medianFiller = lambda x: x.fillna(x.median())
+cData = cData.apply(medianFiller, axis=0)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Median horsepower used for imputation</div>
+        <div class="output-block">93.5</div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Why Median Over Mean?</div>
+        If <code>horsepower</code> has skewed values or outliers, the mean would be pulled toward them. The median is more robust — it represents the "middle" value regardless of extremes.
+      </div>
+    </div>
+  </section>
+
+  <!-- FIT AND EVALUATE -->
+  <section class="section-card" id="s-fit">
+    <div class="card-header">
+      <div class="card-icon">🎯</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Fit the Model & Evaluate</div>
+        <div class="card-duration">⏱ 8 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Split Data (70 / 30)</h3>
+      <pre><code>X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.30, random_state=1
+)</code></pre>
+
+      <h3>Train</h3>
+      <pre><code>regression_model = LinearRegression()
+regression_model.fit(X_train, y_train)</code></pre>
+
+      <h3>Coefficients</h3>
+      <pre><code>for idx, col_name in enumerate(X_train.columns):
+    print(f"{col_name}: {regression_model.coef_[0][idx]:.4f}")</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">cylinders:        -0.3948
+displacement:      0.0289
+horsepower:       -0.0218
+weight:           -0.0074
+acceleration:      0.0619
+model year:        0.8369
+origin_American:  -3.0013
+origin_asia:      -0.6060</div>
+      </div>
+
+      <table>
+        <tr><th>Feature</th><th>Coefficient</th><th>Interpretation</th></tr>
+        <tr class="coef-row-positive"><td>model year</td><td>+0.837</td><td>Newer cars get significantly better mileage</td></tr>
+        <tr class="coef-row-positive"><td>acceleration</td><td>+0.062</td><td>Slight positive effect</td></tr>
+        <tr class="coef-row-positive"><td>displacement</td><td>+0.029</td><td>Small positive — may reflect engine efficiency gains</td></tr>
+        <tr class="coef-row-negative"><td>origin_American</td><td>−3.001</td><td>American cars average ~3 mpg lower than the baseline</td></tr>
+        <tr class="coef-row-negative"><td>cylinders</td><td>−0.395</td><td>More cylinders → lower mileage</td></tr>
+        <tr class="coef-row-negative"><td>weight</td><td>−0.007</td><td>Heavier cars are less fuel-efficient</td></tr>
+      </table>
+
+      <h3>R² on Train and Test</h3>
+      <pre><code>print("Train R²:", regression_model.score(X_train, y_train))
+print("Test R²: ", regression_model.score(X_test, y_test))</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Train R²: 0.8141
+Test R²:  0.8433</div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">✅ Healthy Sign</div>
+        Test R² (0.843) is slightly <em>higher</em> than Train R² (0.814) — the model generalizes well and is not overfitting. This is the result we want to see.
+      </div>
+
+      <h3>AI-Powered Coefficient Narrative</h3>
+      <p>Rather than manually writing a business interpretation every time, we can automate it using an LLM. The code below passes the feature names and coefficients to a Groq-hosted Llama model and asks it to explain the model in plain English for a non-technical audience:</p>
+      <pre><code>from groq import Groq
+import os
+
+client = Groq()  # picks up GROQ_API_KEY from environment
+
+coef_text = "\n".join(
+    f"{col}: {regression_model.coef_[0][i]:.4f}"
+    for i, col in enumerate(X_train.columns)
+)
+
+prompt = f"""
+You are explaining a Linear Regression model predicting car mileage (mpg).
+Intercept: {regression_model.intercept_[0]:.4f}
+Coefficients:
+{coef_text}
+
+In plain English, explain:
+1. Which features increase / decrease mileage
+2. The relative strength of each
+3. Any counter-intuitive coefficients worth investigating
+"""
+
+response = client.chat.completions.create(
+    model="llama-3.3-70b-versatile",
+    max_tokens=500,
+    messages=[{"role": "user", "content": prompt}]
+)
+print(response.choices[0].message.content)</code></pre>
+
+      <div class="callout-ask">
+        <div class="callout-label">💡 Why This Matters</div>
+        Stakeholders rarely care about coefficient values — they care about <em>stories</em>. Using an LLM to translate model internals into narrative is a practical technique for bridging the gap between ML output and business understanding.
+      </div>
+    </div>
+  </section>
+
+  <!-- OUTLIERS -->
+  <section class="section-card" id="s-outliers">
+    <div class="card-header">
+      <div class="card-icon">⚠️</div>
+      <div class="card-meta">
+        <div class="card-type">Concept</div>
+        <div class="card-title">Impact of Outliers on the Regression Line</div>
+        <div class="card-duration">⏱ 2 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>The regression line minimizes the <em>sum of squared errors</em>. Because errors are squared, outliers — which have very large errors — exert a disproportionate <strong>gravitational pull</strong> on the line.</p>
+      <ul>
+        <li><strong>Without outliers:</strong> the best-fit line cleanly follows the trend of the data</li>
+        <li><strong>With an outlier:</strong> the line tilts toward the outlier to reduce its squared error, at the cost of fitting the rest of the data worse</li>
+      </ul>
+      <p>The further an outlier sits from the cluster of normal points, the harder the line is pulled — like a rubber band stretched toward a pin.</p>
+
+      <div class="callout-viz">
+        <div class="viz-icon">🎮</div>
+        <div class="viz-body">
+          <div class="viz-label">Interactive Visualizer</div>
+          Drag an outlier and watch the regression line get pulled toward it in real time:<br>
+          <a href="https://aiml-vizs-new.vercel.app/supervised-learning-regression/outlier-pulling-regression-line-residual-rubber-bands/" target="_blank">Outlier Pulling Regression Line — Rubber Band Visualizer →</a>
+        </div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 Best Practice</div>
+        Always perform outlier detection and treatment <em>before</em> fitting a Linear Regression model. Common methods: IQR-based clipping, z-score filtering, or visual inspection via box plots.
+      </div>
+    </div>
+  </section>
+
+  <!-- ADJUSTED R2 -->
+  <section class="section-card" id="s-adjr2">
+    <div class="card-header">
+      <div class="card-icon">📐</div>
+      <div class="card-meta">
+        <div class="card-type">Metric</div>
+        <div class="card-title">Problems with R² — Adjusted R²</div>
+        <div class="card-duration">⏱ 1.5 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>The Problem with R²</h3>
+      <p>R² has a fatal flaw: it <strong>always increases (or stays the same) when you add more features</strong>, even if those features are completely random noise. This means:</p>
+      <ul>
+        <li>A model with 50 useless features will have a higher R² than one with 5 good ones</li>
+        <li>R² alone cannot tell you if a new feature is genuinely improving the model</li>
+      </ul>
+
+      <h3>Adjusted R² — The Fix</h3>
+      <p>Adjusted R² penalizes the score for adding features that don't improve the model proportionally:</p>
+      <div class="equation">Adj. R² = 1 − (1 − R²) × (n − 1) / (n − p − 1)</div>
+      <p>where <strong>n</strong> = number of samples and <strong>p</strong> = number of features. Adding a useless feature slightly <em>decreases</em> Adjusted R².</p>
+
+      <pre><code>y_hat = regression_model.predict(X_test)
+n = len(y_test)
+p = X_test.shape[1]
+adj_r2 = 1 - (1 - regression_model.score(X_test, y_test)) * (n - 1) / (n - p - 1)
+print("Adjusted R²:", adj_r2)</code></pre>
+      <div class="output-wrap">
+        <div class="output-label">Output</div>
+        <div class="output-block">Adjusted R²: 0.9040928655894155</div>
+      </div>
+
+      <div class="callout-note">
+        <div class="callout-label">📌 When to Use Which</div>
+        Use <strong>R²</strong> for quick sanity checks. Use <strong>Adjusted R²</strong> when comparing models with different numbers of features — it's the fairer judge of actual model quality.
+      </div>
+    </div>
+  </section>
+
+  <!-- STATSMODELS -->
+  <section class="section-card" id="s-statsmodels">
+    <div class="card-header">
+      <div class="card-icon">📋</div>
+      <div class="card-meta">
+        <div class="card-type">Implementation</div>
+        <div class="card-title">Introduction to StatsModels</div>
+        <div class="card-duration">⏱ 6 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>Scikit-Learn is optimized for <em>prediction</em>. StatsModels is optimized for <em>statistical inference</em> — it gives you the full picture of model significance, not just predictions.</p>
+
+      <h3>Scikit-Learn vs StatsModels</h3>
+      <table>
+        <tr><th>Feature</th><th>Scikit-Learn</th><th>StatsModels</th></tr>
+        <tr><td>Primary goal</td><td>Prediction accuracy</td><td>Statistical inference</td></tr>
+        <tr><td>Coefficients</td><td>✅ Yes</td><td>✅ Yes</td></tr>
+        <tr><td>p-values</td><td>❌ No</td><td>✅ Yes</td></tr>
+        <tr><td>Confidence intervals</td><td>❌ No</td><td>✅ Yes</td></tr>
+        <tr><td>Diagnostic tests</td><td>❌ No</td><td>✅ Yes</td></tr>
+        <tr><td>Adjusted R²</td><td>Manual calculation</td><td>✅ Built-in</td></tr>
+      </table>
+
+      <h3>Fit with StatsModels OLS</h3>
+      <pre><code>import statsmodels.api as sm
+from sklearn.preprocessing import MinMaxScaler
+
+# Scale the data first
+scaler = MinMaxScaler()
+df_train_scaled = pd.DataFrame(scaler.fit_transform(df_train), columns=df.columns)
+df_test_scaled  = pd.DataFrame(scaler.transform(df_test),  columns=df.columns)
+
+y_train_sm = df_train_scaled['selling_price'].values
+X_train_sm = df_train_scaled.drop('selling_price', axis=1)
+
+# StatsModels does NOT add an intercept by default — add it manually
+X_sm = sm.add_constant(X_train_sm)
+
+model_sm = sm.OLS(y_train_sm, X_sm)
+results = model_sm.fit()
+print(results.summary())</code></pre>
+
+      <h3>Reading the Summary Table</h3>
+      <table class="stats-table">
+        <tr><th>Column</th><th>Meaning</th></tr>
+        <tr><td>coef</td><td>Estimated coefficient for the feature</td></tr>
+        <tr><td>std err</td><td>Standard error — uncertainty in the coefficient estimate</td></tr>
+        <tr><td>t</td><td>t-statistic: coef / std err</td></tr>
+        <tr><td>P&gt;|t|</td><td><strong>p-value</strong>: probability of seeing this coefficient if the true effect is zero. P &lt; 0.05 = statistically significant</td></tr>
+        <tr><td>[0.025  0.975]</td><td>95% confidence interval for the coefficient</td></tr>
+      </table>
+
+      <h3>Key Results from the Cars24 Output</h3>
+      <table class="stats-table">
+        <tr><th>Feature</th><th>coef</th><th>P&gt;|t|</th><th>Significant?</th></tr>
+        <tr class="stats-significant"><td>model</td><td>0.8594</td><td>0.000</td><td>✅ Yes — strongest predictor</td></tr>
+        <tr class="stats-significant"><td>make</td><td>0.0632</td><td>0.000</td><td>✅ Yes</td></tr>
+        <tr class="stats-significant"><td>km_driven</td><td>−0.2530</td><td>0.000</td><td>✅ Yes — more km → lower price</td></tr>
+        <tr class="stats-significant"><td>Electric</td><td>0.1287</td><td>0.000</td><td>✅ Yes — EVs priced higher</td></tr>
+        <tr><td>Trustmark Dealer</td><td>−0.0070</td><td>0.149</td><td>❌ Not significant</td></tr>
+        <tr><td>Diesel</td><td>0.0067</td><td>0.088</td><td>❌ Not significant at 5%</td></tr>
+      </table>
+
+      <div class="callout-note">
+        <div class="callout-label">⚠️ Multicollinearity Warning</div>
+        The summary shows a very high Condition Number (8.61e+14) — a warning that some features may be highly correlated with each other. This inflates standard errors and makes individual p-values unreliable. Features like <code>year</code> and <code>age</code> are likely the culprits (age = current year − model year).
+      </div>
+    </div>
+  </section>
+
+  <!-- WRAP UP -->
+  <section class="section-card" id="s-wrap">
+    <div class="card-header">
+      <div class="card-icon">✅</div>
+      <div class="card-meta">
+        <div class="card-type">Summary</div>
+        <div class="card-title">Wrapping Up</div>
+        <div class="card-duration">⏱ 1 min</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <p>We've now built a complete, production-minded ML workflow. Here's everything covered today:</p>
+      <div class="summary-grid">
+        <div class="summary-item">MSE surface in 3D and GD convergence</div>
+        <div class="summary-item">Multivariate LR with 17 features</div>
+        <div class="summary-item">Proper train-test split (70/30)</div>
+        <div class="summary-item">Coefficient interpretation</div>
+        <div class="summary-item">Standardization &amp; Min-Max scaling</div>
+        <div class="summary-item">One-Hot Encoding for categoricals</div>
+        <div class="summary-item">Missing value imputation (median)</div>
+        <div class="summary-item">Outlier impact on regression line</div>
+        <div class="summary-item">Adjusted R² vs plain R²</div>
+        <div class="summary-item">StatsModels for p-values &amp; CIs</div>
+      </div>
+      <div class="callout-ask" style="margin-top:20px">
+        <div class="callout-label">🔮 Coming Up Next</div>
+        We've built models that work — but can we trust them? Next session explores the <strong>assumptions of Linear Regression</strong>, what happens when they're violated, and how to diagnose and fix those issues.
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<button id="back-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Back to top">↑</button>
+
+<script>
+  // ── QUIZ LOGIC ─────────────────────────────────────
+  document.querySelectorAll('.quiz-options').forEach(list => {
+    list.querySelectorAll('.quiz-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const qid = list.closest('.section-card').id;
+        if (opt.closest('.section-card').dataset.answered) return;
+        opt.closest('.section-card').dataset.answered = '1';
+        const isCorrect = opt.dataset.correct === 'true';
+        const feedback = list.closest('.card-body').querySelector('.quiz-feedback');
+        list.querySelectorAll('.quiz-option').forEach(o => { o.style.cursor = 'default'; });
+        if (isCorrect) {
+          opt.classList.add('selected-correct');
+          opt.querySelector('.quiz-circle').textContent = '✓';
+          feedback.textContent = '✅ Correct!';
+          feedback.className = 'quiz-feedback correct';
+        } else {
+          opt.classList.add('selected-wrong');
+          opt.querySelector('.quiz-circle').textContent = '✗';
+          feedback.textContent = '❌ Not quite — check the explanation.';
+          feedback.className = 'quiz-feedback wrong';
+          list.querySelectorAll('.quiz-option[data-correct="true"]').forEach(o => {
+            o.classList.add('reveal-correct');
+            o.querySelector('.quiz-circle').textContent = '✓';
+          });
+        }
+      });
+    });
+  });
+
+  // ── SCROLL / PROGRESS ─────────────────────────────
+  const sections = document.querySelectorAll('.section-card');
+  const navItems = document.querySelectorAll('.nav-item');
+  const progressFill = document.getElementById('progress-fill');
+  const progressPct  = document.getElementById('progress-pct');
+  const visited = new Set();
+
+  function onScroll() {
+    let current = '';
+    sections.forEach(sec => {
+      if (sec.getBoundingClientRect().top <= 120) {
+        current = sec.id;
+        visited.add(sec.id);
+      }
+    });
+    navItems.forEach(item => {
+      item.classList.toggle('active', item.dataset.target === current);
+      if (visited.has(item.dataset.target)) item.classList.add('visited');
+    });
+    const pct = Math.round((visited.size / sections.length) * 100);
+    progressFill.style.width = pct + '%';
+    progressPct.textContent  = pct + '%';
+    document.getElementById('back-top').classList.toggle('visible', window.scrollY > 400);
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // ── MOBILE SIDEBAR ─────────────────────────────────
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('overlay').classList.toggle('active');
+  }
+  document.querySelectorAll('.nav-item a').forEach(a => {
+    a.addEventListener('click', () => { if (window.innerWidth <= 768) toggleSidebar(); });
+  });
+</script>
+</body>
+</html>
